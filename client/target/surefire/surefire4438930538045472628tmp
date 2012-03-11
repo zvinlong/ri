@@ -1,0 +1,29 @@
+#surefire
+#Fri Dec 09 14:08:30 CST 2011
+testClassesDirectory=D\:\\workspace\\client\\target\\test-classes
+classPathUrl.4=D\:\\mvn_repo\\org\\duhei\\irm\\server\\1.0.0\\server-1.0.0.jar
+classPathUrl.3=D\:\\mvn_repo\\org\\duhei\\commons\\util\\1.0.0\\util-1.0.0.jar
+classPathUrl.2=D\:\\mvn_repo\\junit\\junit\\4.8\\junit-4.8.jar
+useManifestOnlyJar=true
+classPathUrl.1=D\:\\workspace\\client\\target\\classes
+reportsDirectory=D\:\\workspace\\client\\target\\surefire-reports
+classPathUrl.0=D\:\\workspace\\client\\target\\test-classes
+dirscanner.0=directoryScannerOptions
+providerConfiguration=org.apache.maven.surefire.junit4.JUnit4Provider
+testSuiteDefinitionTestSourceDirectory=D\:\\workspace\\client\\src\\test\\java
+surefireClassPathUrl.1=D\:\\mvn_repo\\org\\apache\\maven\\surefire\\surefire-api\\2.7.1\\surefire-api-2.7.1.jar
+surefireClassPathUrl.0=D\:\\mvn_repo\\org\\apache\\maven\\surefire\\surefire-junit4\\2.7.1\\surefire-junit4-2.7.1.jar
+report.2=org.apache.maven.surefire.report.XMLReporter
+useSystemClassLoader=true
+report.1=org.apache.maven.surefire.report.BriefFileReporter
+report.0=org.apache.maven.surefire.report.ForkingConsoleReporter
+excludes0=**/*$*
+isTrimStackTrace=true
+dirscanner.0.params=D\:\\workspace\\client\\target\\test-classes|[**/Test*.java, **/*Test.java, **/*TestCase.java]|[**/*$*]
+enableAssertions=true
+includes2=**/*TestCase.java
+failIfNoTests=false
+includes1=**/*Test.java
+dirscanner.0.types=java.io.File|java.util.ArrayList|java.util.ArrayList
+includes0=**/Test*.java
+childDelegation=false

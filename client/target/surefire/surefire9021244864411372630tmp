@@ -1,0 +1,5 @@
+#surefire
+#Fri Dec 09 20:57:53 CST 2011
+user.dir=D\:\\workspace\\client
+localRepository=D\:\\mvn_repo
+basedir=D\:\\workspace\\client

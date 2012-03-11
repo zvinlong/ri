@@ -1,0 +1,294 @@
+package org.duhei.irm.server;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import org.duhei.commons.util.ClassPathScanner;
+import org.duhei.commons.util.Datas;
+import org.duhei.commons.util.ThreadUtil;
+import org.duhei.irm.server.message.Id;
+import org.duhei.irm.server.message.MessageProcessor;
+
+/**
+ * @author zvin
+ * 
+ */
+public class Server {
+
+	public static final String CHARSET = "UTF-8";
+
+	private String id;
+	private static Map<String, Session> clientSessionsMap;
+	private Map<String, Session> serverSessionsMap;
+	private Map<String, Channel> channels;
+	private ServerSocket serverSocket;
+	private Map<String, Object> attributes;
+	private Map<String, MessageProcessor> messageProcessorMap;
+	private static String home;
+
+	public Server(String id) {
+		this.id = id;
+		init();
+	}
+
+	private void init() {
+		clientSessionsMap = new HashMap<String, Session>();
+		serverSessionsMap = new HashMap<String, Session>();
+		channels = new HashMap<String, Channel>();
+		attributes = new HashMap<String, Object>();
+		messageProcessorMap = new HashMap<String, MessageProcessor>();
+
+		ClassPathScanner scanner = new ClassPathScanner();
+		Set<Class<?>> processors = scanner.getPackageAllClasses(
+				"org.duhei.irm.server.message.processor", false);
+		for (Class<?> classT : processors) {
+			MessageProcessor messageProcessor = null;
+			try {
+				messageProcessor = (MessageProcessor) classT.newInstance();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+			Id idA = messageProcessor.getClass().getAnnotation(Id.class);
+			String id = idA.value();
+			messageProcessorMap.put(id, messageProcessor);
+		}
+
+		// To be deleted in the future
+		Thread thread = new Thread(new Runnable() {
+
+			public void run() {
+
+				boolean isQuit = false;
+
+				int port = 11112;
+
+				String ip = "localhost";
+
+				DatagramSocket datagramSocket = null;
+				try {
+					datagramSocket = new DatagramSocket();
+				} catch (SocketException e) {
+					e.printStackTrace();
+				}
+
+				int millis = 3000;
+				;
+
+				while (!isQuit) {
+
+					if (!clientSessionsMap.isEmpty()) {
+						StringBuilder sb = new StringBuilder();
+						for (Session session : clientSessionsMap.values()) {
+							sb.append(session.getId()).append(",");
+						}
+						String msg = sb.toString();
+						msg = msg.substring(0, msg.length() - 1);
+						byte[] datas = msg.getBytes();
+						DatagramPacket datagramPacket = null;
+						try {
+							datagramPacket = new DatagramPacket(datas,
+									datas.length, InetAddress.getByName(ip),
+									port);
+						} catch (UnknownHostException e1) {
+							e1.printStackTrace();
+							isQuit = true;
+							break;
+						}
+
+						try {
+							datagramSocket.send(datagramPacket);
+						} catch (IOException e) {
+							e.printStackTrace();
+							isQuit = true;
+						}
+					}
+					try {
+						Thread.currentThread().sleep(millis);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				// ServerSocket serverSocket = null;
+				//
+				// try {
+				// serverSocket = new ServerSocket(port);
+				// } catch (IOException e) {
+				// e.printStackTrace();
+				// }
+				//
+				// while (!isQuit) {
+				// Socket socket = null;
+				// try {
+				// socket = serverSocket.accept();
+				// } catch (IOException e) {
+				// e.printStackTrace();
+				// isQuit = true;
+				// }
+				//
+				// InputStream is = null;
+				// byte[] inBuffer = new byte[1024];
+				// int count = 0;
+				// try {
+				// is = socket.getInputStream();
+				// count = is.read(inBuffer);
+				// } catch (IOException e) {
+				// e.printStackTrace();
+				// isQuit = true;
+				// }
+				//
+				// if (count == 3) {
+				// StringBuilder sb = new StringBuilder();
+				// for (Session session : clientSessionsMap.values()) {
+				// sb.append(session.getId()).append(",");
+				// }
+				// String msg = sb.toString();
+				// msg = msg.substring(0, msg.length() - 1);
+				// try {
+				// socket.getOutputStream().write(msg.getBytes());
+				// } catch (IOException e) {
+				// e.printStackTrace();
+				// isQuit = true;
+				// }
+				// }
+				// }
+				//
+			}
+
+		});
+
+		thread.setDaemon(true);
+		thread.start();
+	}
+
+	public void setAttribute(String key, Object value) {
+		attributes.put(key, value);
+	}
+
+	public Object getAttribute(String key) {
+		return attributes.get(key);
+	}
+
+	public Session getClientSession(String clientId) {
+		return clientSessionsMap.get(clientId);
+	}
+
+	public static void removeSession(String clientId) {
+		clientSessionsMap.remove(clientId);
+	}
+
+	public Session getServerSession(String serverId) {
+		return serverSessionsMap.get(serverId);
+	}
+
+	public MessageProcessor getMessageProcessor(String command) {
+		return messageProcessorMap.get(command);
+	}
+
+	public void relay(String serverId, Message message) {
+
+	}
+
+	public void sendToOne(String clientId, String message) {
+		if (!Datas.isEmpty(clientId)) {
+			Session session = clientSessionsMap.get(clientId);
+			if (null != session && !Datas.isEmpty(message)) {
+				session.send(message);
+			}
+		} else {
+
+		}
+	}
+
+	public void sendToChannel(String channelId, String message) {
+		Channel channel = channels.get(channelId);
+		for (Session session : channel.getSessions().values()) {
+			session.send(message);
+		}
+	}
+
+	public void sendToAll(String message) {
+		for (Session session : clientSessionsMap.values()) {
+			session.send(message);
+		}
+	}
+
+	protected void addClientSession(Session session) {
+		clientSessionsMap.put(session.getId(), session);
+	}
+
+	protected void addServerSession(Session session) {
+		clientSessionsMap.put(session.getId(), session);
+	}
+
+	public boolean isClientSessionExist(String clientId) {
+		return clientSessionsMap.containsKey(clientId);
+	}
+
+	public boolean isServerSessionExist(String serverId) {
+		return serverSessionsMap.containsKey(serverId);
+	}
+
+	public void start(String home) {
+		Properties properties = new Properties();
+		try {
+			properties.load(new FileInputStream(home + File.separator + "conf"
+					+ File.separator + "server.properties"));
+			int port = 0;
+			port = Integer.valueOf(properties.getProperty("port"));
+
+			serverSocket = new ServerSocket(port);
+			if (null == serverSocket) {
+				System.out.println("[ERROR]:The port of network is occupied.");
+			}
+			ClientListener clientListener = new ClientListener(this);
+			ThreadUtil.start(clientListener);
+		} catch (FileNotFoundException e) {
+			System.out
+					.println("[ERROR]:${home}/conf/server.properties is not found.");
+		} catch (IOException e) {
+			System.out.println("[ERROR]:IO Exception.");
+		}
+	}
+
+	@SuppressWarnings("unused")
+	private void stop() {
+		try {
+			serverSocket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	protected ServerSocket getServerSocket() {
+		return serverSocket;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public static void main(String[] args) {
+		String id = "server01";
+		Server server = new Server(id);
+		home = args[0];
+		server.start(home);
+	}
+}
